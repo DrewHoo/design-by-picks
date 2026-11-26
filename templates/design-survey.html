@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design survey</title>
+<style>
+/* One screen: the question, the shot filling what's left, five buttons under a thumb. */
+:root {
+  --bg: #eceef1;
+  --surface: #ffffff;
+  --ink: #1b1e23;
+  --muted: #5a626d;
+  --line: #cdd2d9;
+  --mark: #d9146f;
+  --mark-ink: #ffffff;
+  --display: 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+  --body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #14161a; --surface: #1d2025; --ink: #e9ebee; --muted: #9ba3ad; --line: #343a42; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 var(--body); }
+button { font: inherit; color: inherit; touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; }
+button:focus-visible, textarea:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+#score { height: 100%; max-width: 520px; margin: 0 auto; padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 10px; }
+#score h1 { font: 600 22px/1.1 var(--display); margin: 0; text-wrap: balance; }
+.meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.meta b { color: var(--ink); font-weight: 600; }
+.clock { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.clock i { display: block; height: 100%; width: 100%; background: var(--mark); transform-origin: left; }
+.clock i.run { animation: drain 20s linear forwards; }
+@keyframes drain { to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .clock { display: none; } }
+/* The shot fills the frame's width: its top shows, and the rest scrolls inside the frame. */
+figure { margin: 0; flex: 1; min-height: 0; border: 1px solid var(--line); border-radius: 8px; overflow-y: auto; overscroll-behavior: contain; background: #111; }
+figure img { display: block; width: 100%; height: auto; }
+.scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.scale button { height: 54px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font: 600 24px/1 var(--display); font-variant-numeric: tabular-nums; }
+.scale button:active, .scale button.on { background: var(--mark); border-color: var(--mark); color: var(--mark-ink); }
+.ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: -4px; }
+.under { display: flex; justify-content: space-between; align-items: center; min-height: 32px; }
+.plain { border: 0; background: none; padding: 6px 0; font-size: 14px; color: var(--muted); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.plain:disabled { opacity: 0.4; cursor: default; }
+
+#results { max-width: 720px; margin: 0 auto; padding: 24px 16px 80px; }
+#results h1 { font: 600 32px/1.05 var(--display); margin: 0 0 8px; }
+#results h2 { font: 600 22px/1.1 var(--display); margin: 32px 0 10px; }
+#results p { margin: 0 0 12px; max-width: 62ch; color: var(--muted); }
+#status { font-size: 14px; padding: 8px 12px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); display: inline-block; }
+.why { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.why li { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+.why img { width: 84px; height: 150px; object-fit: cover; object-position: top; border-radius: 4px; border: 1px solid var(--line); background: #111; }
+.why .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.why .head b { font-weight: 600; }
+.why .head span { font: 600 20px/1 var(--display); color: var(--mark); font-variant-numeric: tabular-nums; }
+.why small { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+textarea { width: 100%; min-height: 76px; resize: vertical; font: inherit; font-size: 16px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+.rest { list-style: none; margin: 0; padding: 0; max-width: 420px; }
+.rest li { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.actions button { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 10px 14px; font-weight: 500; }
+.actions button.main { background: var(--mark); border-color: var(--mark); color: var(--mark-ink); }
+</style>
+</head>
+<body>
+<main id="score">
+  <h1 id="question"></h1>
+  <div class="meta"><span><b id="label"></b> <span id="kind"></span></span><span id="count"></span></div>
+  <div class="clock" aria-hidden="true"><i id="clock"></i></div>
+  <figure><img id="shot" alt=""></figure>
+  <div class="scale" role="group" aria-label="Score from 1 to 5">
+    <button type="button" data-n="1">1</button><button type="button" data-n="2">2</button><button type="button" data-n="3">3</button><button type="button" data-n="4">4</button><button type="button" data-n="5">5</button>
+  </div>
+  <div class="ends"><span>not at all</span><span>very</span></div>
+  <div class="under"><button type="button" class="plain" id="back">Back one</button><span class="meta">Go on your gut. The shot scrolls.</span></div>
+</main>
+<main id="results" hidden>
+  <h1>Your scores</h1>
+  <p>Say why for the five at each end. A few words each is enough: what you’d take, or what puts you off.</p>
+  <div id="status" role="status">Saving…</div>
+  <h2>The five you’d be happiest with</h2>
+  <ul class="why" id="top"></ul>
+  <h2>The five you’d be least happy with</h2>
+  <ul class="why" id="bottom"></ul>
+  <h2>The rest</h2>
+  <ul class="rest" id="rest"></ul>
+  <div class="actions">
+    <button type="button" class="main" id="copy">Copy my answers</button>
+    <button type="button" id="rescore">Go through them again</button>
+  </div>
+</main>
+<script>
+// Everything the page asks comes from TEST. Fill it in, put each shot beside this file as `<name>.jpg`,
+// and publish (references/pick-page.md).
+const TEST = {
+  // Where the answers save: one database document. Write the name in the reactions file.
+  doc: 'survey/answers',
+  // This browser's copy of the answers. Change it when the items change.
+  key: 'survey-v1',
+  // One question for every shot, about the project.
+  question: 'If the site looked and worked like this, how happy would you be?',
+  // About twenty, in an order that mixes the kinds. `name` is the shot's file name without `.jpg`.
+  items: [
+    { name: 'example-a', label: 'A newspaper box score', kind: 'print' },
+    { name: 'example-b', label: 'Hacker News', kind: 'a tool' },
+  ],
+};
+const ITEMS = TEST.items;
+const KEY = TEST.key;
+const state = { scores: {}, why: {}, at: 0 };
+const $ = (id) => document.getElementById(id);
+const known = new Set(ITEMS.map((item) => item.name));
+
+// Only scores of 1 to 5 for a known shot, and text for a known shot, are taken from storage.
+function adopt(saved) {
+  if (!saved || typeof saved !== 'object') return false;
+  const scores = {};
+  const why = {};
+  for (const [name, n] of Object.entries(saved.scores || {})) if (known.has(name) && [1, 2, 3, 4, 5].includes(n)) scores[name] = n;
+  for (const [name, text] of Object.entries(saved.why || {})) if (known.has(name) && typeof text === 'string') why[name] = text.slice(0, 2000);
+  if (Object.keys(scores).length < Object.keys(state.scores).length) return false;
+  state.scores = scores;
+  state.why = { ...why, ...state.why };
+  state.at = Math.min(ITEMS.length, ITEMS.findIndex((item) => !(item.name in scores)) === -1 ? ITEMS.length : ITEMS.findIndex((item) => !(item.name in scores)));
+  return true;
+}
+
+try { adopt(JSON.parse(localStorage.getItem(KEY))); } catch {}
+
+let db = null;
+let saving = false;
+let dirty = false;
+let saved = 'pending';
+async function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
+  if (!db) return;
+  if (saving) { dirty = true; return; }
+  saving = true;
+  try {
+    await db.doc(TEST.doc).set({ scores: state.scores, why: state.why, done: state.at >= ITEMS.length, of: ITEMS.length });
+    saved = 'yes';
+  } catch { saved = 'no'; }
+  saving = false;
+  showStatus();
+  if (dirty) { dirty = false; save(); }
+}
+function showStatus() {
+  $('status').textContent =
+    saved === 'yes' ? 'Saved. Claude can read these from here.'
+    : saved === 'no' ? 'These couldn’t be saved from this view. Use Copy my answers and paste them into the chat.'
+    : 'Saving…';
+}
+if (window.claude && window.claude.use) {
+  window.claude.use('db').then(async (namespace) => {
+    if (!namespace) { saved = 'no'; showStatus(); return; }
+    db = namespace;
+    try {
+      const snap = await db.doc(TEST.doc).get();
+      if (snap.exists && adopt(snap.data())) render();
+      saved = 'yes';
+    } catch { saved = 'no'; }
+    showStatus();
+    if (Object.keys(state.scores).length) save();
+  }).catch(() => { saved = 'no'; showStatus(); });
+} else { saved = 'no'; }
+
+function render() {
+  $('question').textContent = TEST.question;
+  const done = state.at >= ITEMS.length;
+  $('score').hidden = done;
+  $('results').hidden = !done;
+  if (done) return results();
+  const item = ITEMS[state.at];
+  $('shot').src = item.name + '.jpg';
+  $('shot').parentElement.scrollTop = 0;
+  $('shot').alt = item.label;
+  $('label').textContent = item.label;
+  $('kind').textContent = item.kind;
+  $('count').textContent = (state.at + 1) + ' of ' + ITEMS.length;
+  $('back').disabled = state.at === 0;
+  for (const button of document.querySelectorAll('.scale button')) button.classList.toggle('on', state.scores[item.name] === Number(button.dataset.n));
+  const clock = $('clock');
+  clock.classList.remove('run');
+  void clock.offsetWidth;
+  clock.classList.add('run');
+  const next = ITEMS[state.at + 1];
+  if (next) new Image().src = next.name + '.jpg';
+}
+
+function row(item) {
+  const li = document.createElement('li');
+  const img = document.createElement('img');
+  img.src = item.name + '.jpg';
+  img.alt = '';
+  const body = document.createElement('div');
+  const head = document.createElement('div');
+  head.className = 'head';
+  const name = document.createElement('b');
+  name.textContent = item.label;
+  const n = document.createElement('span');
+  n.textContent = state.scores[item.name];
+  head.append(name, n);
+  const kind = document.createElement('small');
+  kind.textContent = item.kind;
+  const box = document.createElement('textarea');
+  box.id = 'why-' + item.name;
+  box.placeholder = 'Why?';
+  box.setAttribute('aria-label', 'Why, for ' + item.label);
+  box.value = state.why[item.name] || '';
+  let timer;
+  box.addEventListener('input', () => {
+    state.why[item.name] = box.value;
+    clearTimeout(timer);
+    timer = setTimeout(save, 900);
+  });
+  body.append(head, kind, box);
+  li.append(img, body);
+  return li;
+}
+
+function ranked() { return ITEMS.map((item, i) => ({ item, i })).sort((a, b) => state.scores[b.item.name] - state.scores[a.item.name] || a.i - b.i).map((x) => x.item); }
+
+function results() {
+  const order = ranked();
+  const top = order.slice(0, 5);
+  const bottom = order.slice(-5).reverse();
+  const rest = order.slice(5, -5);
+  $('top').replaceChildren(...top.map(row));
+  $('bottom').replaceChildren(...bottom.map(row));
+  $('rest').replaceChildren(...rest.map((item) => {
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    name.textContent = item.label;
+    const n = document.createElement('span');
+    n.textContent = state.scores[item.name];
+    li.append(name, n);
+    return li;
+  }));
+  showStatus();
+}
+
+function answersAsText() {
+  const lines = ['Survey answers'];
+  for (const item of ranked()) lines.push(state.scores[item.name] + '  ' + item.label + (state.why[item.name] ? ': ' + state.why[item.name].trim() : ''));
+  return lines.join('\n');
+}
+
+for (const button of document.querySelectorAll('.scale button')) {
+  button.addEventListener('click', () => {
+    state.scores[ITEMS[state.at].name] = Number(button.dataset.n);
+    state.at += 1;
+    render();
+    save();
+  });
+}
+$('back').addEventListener('click', () => { if (state.at > 0) { state.at -= 1; render(); } });
+$('rescore').addEventListener('click', () => { state.at = 0; render(); });
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(answersAsText()); $('copy').textContent = 'Copied'; }
+  catch { $('copy').textContent = 'Couldn’t copy here'; }
+  setTimeout(() => { $('copy').textContent = 'Copy my answers'; }, 1600);
+});
+document.addEventListener('keydown', (event) => {
+  if (state.at >= ITEMS.length || event.target.tagName === 'TEXTAREA') return;
+  if (['1', '2', '3', '4', '5'].includes(event.key)) document.querySelector('.scale button[data-n="' + event.key + '"]').click();
+  if (event.key === 'ArrowLeft') $('back').click();
+});
+render();
+</script>
+</body>
+</html>

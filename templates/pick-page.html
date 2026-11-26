@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Picks</title>
+<style>
+/* A working page in one column, read at any width. Each pick is a flip between shots drawn at their real width.
+   The page's own look is plain on purpose, so it is never mistaken for an option. */
+:root {
+  --bg: #eceef1;
+  --surface: #ffffff;
+  --ink: #1b1e23;
+  --muted: #5a626d;
+  --line: #cdd2d9;
+  --mark: #d9146f;
+  --mark-ink: #ffffff;
+  --display: 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+  --body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #14161a; --surface: #1d2025; --ink: #e9ebee; --muted: #9ba3ad; --line: #343a42; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--body); }
+main { max-width: 720px; margin: 0 auto; padding: 20px 16px 80px; }
+h1 { font: 700 36px/1.05 var(--display); margin: 8px 0 12px; text-wrap: balance; }
+h2 { font: 700 26px/1.1 var(--display); margin: 0 0 8px; text-wrap: balance; }
+p { margin: 0 0 10px; }
+button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
+.label { display: block; font: 600 11px/1.2 var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+.intro { color: var(--muted); }
+.ask { background: var(--surface); border-left: 3px solid var(--mark); padding: 12px 14px; margin: 14px 0; }
+section { margin: 56px 0 0; }
+.said { color: var(--muted); border-left: 2px solid var(--line); padding-left: 12px; }
+
+/* the flip: one shot showing, the bar staying on screen while a tall shot scrolls under it */
+.flip { margin: 14px -16px 10px; }
+.bar { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 8px 16px; display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; gap: 6px; }
+.tabs button { font: 600 16px/1 var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; min-width: 52px; height: 44px; cursor: pointer; position: relative; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tabs button.picked::after { content: '✓'; position: absolute; top: 3px; right: 5px; font-size: 11px; color: var(--mark); }
+.choose { font: 600 15px/1 var(--body); height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--mark); background: var(--mark); color: var(--mark-ink); cursor: pointer; white-space: nowrap; }
+.choose.is { background: transparent; color: var(--ink); }
+.now { grid-column: 1 / -1; margin: 0; font-size: 14px; line-height: 1.35; min-height: 2.7em; }
+.now b { font-weight: 600; }
+.shots { display: grid; width: 100%; margin: 0 auto; background: #111; cursor: pointer; }
+.shots img { grid-area: 1 / 1; display: block; width: 100%; height: auto; }
+.shots img[hidden] { display: none; }
+figure.still { margin: 14px -16px 10px; }
+figure.still img { display: block; width: 100%; height: auto; margin: 0 auto; }
+
+.answers { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.answers button { font: 600 15px/1 var(--body); min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.answers button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+textarea { width: 100%; min-height: 64px; font: 400 16px/1.4 var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; resize: vertical; }
+details { margin: 10px 0 0; }
+summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; gap: 8px; }
+summary::before { content: '+'; display: inline-grid; place-items: center; width: 22px; height: 22px; border: 1px solid var(--line); border-radius: 50%; font-weight: 400; }
+details[open] summary::before { content: '−'; }
+summary::-webkit-details-marker { display: none; }
+details p { color: var(--muted); }
+details p b { color: var(--ink); }
+
+.table { overflow-x: auto; margin: 0 -16px; padding: 0 16px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+th { text-align: left; font: 600 11px/1.2 var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 12px 6px 0; }
+td { vertical-align: top; padding: 8px 12px 8px 0; border-top: 1px solid var(--line); }
+td:first-child { font-weight: 600; width: 24%; }
+td:nth-child(2) { color: var(--muted); width: 34%; }
+dl.later { margin: 0; }
+dl.later dt { font-weight: 600; margin-top: 10px; }
+dl.later dd { margin: 0; color: var(--muted); }
+
+.done { background: var(--surface); padding: 14px; margin-top: 14px; }
+.done ol { margin: 0 0 10px; padding-left: 22px; }
+.done li.none { color: var(--muted); }
+#status { font-size: 14px; color: var(--muted); }
+.actions button { font: 600 15px/1 var(--body); min-height: 44px; padding: 0 16px; border-radius: 6px; border: 1px solid var(--mark); background: var(--mark); color: var(--mark-ink); cursor: pointer; }
+</style>
+</head>
+<body>
+<main id="page"></main>
+<script>
+// Everything on the page comes from PAGE. Fill it in, put the pictures beside this file, and publish
+// (references/pick-page.md). Every string is set as text, so none of it is HTML.
+const PAGE = {
+  // Where the answers save: one database document, `<stage>/answers`. Write the name in the reactions file.
+  doc: 'stage-4/answers',
+  // This browser's copy of the answers. Change it when a pick's id or its versions change.
+  key: 'stage-4-v1',
+  title: 'Testing the principles',
+  label: 'Design, stage 4 · 2026-01-01',
+  // What the last stage settled and what this one is for, in two or three sentences.
+  intro: ['The last stage is settled. This one turns it into numbers: how tall, how many sizes, which lines.'],
+  // The one thing being asked for, said once. It is drawn in a box under the intro.
+  ask: 'two picks. Each shows one page two or three ways that differ in one thing. Use A, B and C to flip between them in place, or tap the picture. A is always today’s page. Press “Pick” on the one you’d ship, and add a word if you have one. Your picks save as you go. My own pick is folded away under each, so yours comes first.',
+  // The width the pictures were shot at, in CSS pixels. Shots are drawn at this width, so on a screen that
+  // wide or wider a row is the height it would really be.
+  shotWidth: 390,
+  picks: [
+    {
+      id: 'rows',
+      q: 'How tall is a row?',
+      // What the picture shows and what was held still.
+      about: 'A board, from its first row down. The window is the same height in all three.',
+      // The reaction or principle this pick answers. Leave out where the pick is the agent's addition, and say so in `about`.
+      said: 'You said the rows “may be too tall”.',
+      // The first version is today's page, always.
+      versions: [
+        { name: '48px, today', detail: '13 rows fit in this window.', img: 'rows-48.jpg', w: 780, h: 1280 },
+        { name: '40px', detail: '15 rows fit.', img: 'rows-40.jpg', w: 780, h: 1280 },
+        { name: '36px', detail: '17 rows fit.', img: 'rows-36.jpg', w: 780, h: 1280 },
+      ],
+      // The agent's pick, folded shut. `i` is the version's index.
+      mine: { i: 1, why: 'A board and a table would share one row height.' },
+    },
+    {
+      id: 'all',
+      q: 'All together',
+      about: 'A board with my picks at once. One change at a time is how to judge each, and they still have to work together.',
+      versions: [
+        { name: 'Today', detail: '19 rows fit in this window.', img: 'all-today.jpg', w: 780, h: 3000 },
+        { name: 'My picks together', detail: '21 rows fit.', img: 'all-together.jpg', w: 780, h: 3000 },
+      ],
+      // With `choices` the flip has no Pick button and the answer is one of these.
+      choices: ['Closer to what I want', 'Further from it', 'Can’t tell'],
+    },
+    // A blind test (references/blind-test.md): the versions don't say which agent had the rules, and `reveal`
+    // is folded shut under the note box.
+    // {
+    //   id: 'blind', q: 'A page neither agent had seen',
+    //   about: 'Two fresh agents each laid out this page. One also got the rules. Which is which is folded away below.',
+    //   versions: [
+    //     { name: 'Today', detail: 'The page as it is.', img: 'blind-today.jpg', w: 780, h: 4000 },
+    //     { name: 'One agent’s page', detail: 'Laid out from today’s page and the brief.', img: 'blind-b.jpg', w: 780, h: 4000 },
+    //     { name: 'The other agent’s page', detail: 'Laid out from today’s page and the brief.', img: 'blind-c.jpg', w: 780, h: 4000 },
+    //   ],
+    //   notePlaceholder: 'What made you pick it',
+    //   reveal: 'C had the rules. B had only the one sentence about what the site is for.',
+    // },
+  ],
+  // A picture with a note box and no pick: a page assembled from earlier picks, for "anything that's off".
+  stills: [
+    // { id: 'teampicks', q: 'A team’s page', label: 'Made from your picks', about: 'What it is made of.', img: 'team-picks.jpg', w: 780, h: 4000, calls: 'Three calls here are mine: …' },
+  ],
+  // The small calls the agent made without asking, for the owner to overrule.
+  calls: [
+    { what: 'The small uppercase label', today: 'Twelve versions', call: 'One: 11px, weight 600. That’s the commonest of the twelve.' },
+  ],
+  // What these picks leave for a later stage, so nothing looks forgotten.
+  later: [
+    { when: 'Stage 5, the interaction lab', what: 'What a press looks like, a menu opening, waiting.' },
+  ],
+};
+
+const LETTERS = 'ABCDE';
+const state = { picks: {}, notes: {} };
+const byId = Object.fromEntries(PAGE.picks.map((p) => [p.id, p]));
+const noteIds = new Set([...PAGE.picks.map((p) => p.id), ...PAGE.stills.map((s) => s.id)]);
+const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, ...kids) => {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') node.className = v;
+    else if (k === 'text') node.textContent = v;
+    else if (v !== false && v !== undefined) node.setAttribute(k, v === true ? '' : v);
+  }
+  node.append(...kids.filter(Boolean));
+  return node;
+};
+
+// --- the page, built from PAGE ----------------------------------------------
+function build() {
+  document.title = PAGE.title;
+  const main = $('page');
+  main.append(el('header', {},
+    el('span', { class: 'label', text: PAGE.label }),
+    el('h1', { text: PAGE.title }),
+    ...PAGE.intro.map((text) => el('p', { class: 'intro', text })),
+    el('p', { class: 'ask' }, el('b', { text: 'What I need from you: ' }), PAGE.ask),
+  ));
+  PAGE.picks.forEach((p, n) => {
+    const tall = Math.max(...p.versions.map((v) => v.h / v.w));
+    const flip = el('div', { class: 'flip', 'data-pick': p.id },
+      el('div', { class: 'bar' },
+        el('div', { class: 'tabs', role: 'tablist', 'aria-label': p.q },
+          ...p.versions.map((v, i) => el('button', { type: 'button', role: 'tab', 'aria-selected': String(i === 0), 'data-i': i, 'aria-label': LETTERS[i] + ': ' + v.name, text: LETTERS[i] }))),
+        p.choices ? null : el('button', { type: 'button', class: 'choose' }),
+        el('p', { class: 'now', 'aria-live': 'polite' })),
+      el('div', { class: 'shots', style: 'max-width: ' + PAGE.shotWidth + 'px; aspect-ratio: 1 / ' + tall },
+        ...p.versions.map((v, i) => el('img', { src: v.img, width: v.w, height: v.h, alt: LETTERS[i] + ': ' + v.name, 'data-i': i, hidden: i !== 0, loading: n === 0 ? false : 'lazy' }))));
+    main.append(el('section', { id: p.id },
+      el('span', { class: 'label', text: 'Pick ' + (n + 1) + ' of ' + PAGE.picks.length }),
+      el('h2', { text: p.q }),
+      p.about ? el('p', { text: p.about }) : null,
+      p.said ? el('p', { class: 'said', text: p.said }) : null,
+      flip,
+      p.choices ? el('div', { class: 'answers', 'data-answers': p.id }, ...p.choices.map((text, i) => el('button', { type: 'button', 'aria-pressed': 'false', 'data-i': i, text }))) : null,
+      el('textarea', { 'data-note': p.id, 'aria-label': 'A note on this pick', placeholder: p.notePlaceholder || 'A note, if you have one' }),
+      p.mine ? el('details', {}, el('summary', { text: 'My pick, and why' }), el('p', {}, el('b', { text: LETTERS[p.mine.i] + ', ' + p.versions[p.mine.i].name + '. ' }), p.mine.why)) : null,
+      p.reveal ? el('details', {}, el('summary', { text: 'Which is which' }), el('p', { text: p.reveal })) : null,
+    ));
+  });
+  for (const s of PAGE.stills) {
+    main.append(el('section', { id: s.id },
+      s.label ? el('span', { class: 'label', text: s.label }) : null,
+      el('h2', { text: s.q }),
+      s.about ? el('p', { text: s.about }) : null,
+      el('figure', { class: 'still' }, el('img', { src: s.img, width: s.w, height: s.h, alt: s.q, loading: 'lazy', style: 'max-width: ' + PAGE.shotWidth + 'px' })),
+      s.calls ? el('p', { class: 'intro', text: s.calls }) : null,
+      el('textarea', { 'data-note': s.id, 'aria-label': 'A note on ' + s.q, placeholder: 'Anything that’s off' }),
+    ));
+  }
+  if (PAGE.calls.length) {
+    main.append(el('section', { id: 'calls' },
+      el('h2', { text: 'Calls I made without asking' }),
+      el('p', { class: 'intro', text: 'Your words or the project’s own counts already answer these. Say so if one is wrong.' }),
+      el('div', { class: 'table' }, el('table', {},
+        el('thead', {}, el('tr', {}, el('th', { text: 'What' }), el('th', { text: 'Today' }), el('th', { text: 'The call' }))),
+        el('tbody', {}, ...PAGE.calls.map((c) => el('tr', {}, el('td', { text: c.what }), el('td', { text: c.today }), el('td', { text: c.call }))))))));
+  }
+  if (PAGE.later.length) {
+    main.append(el('section', { id: 'later' },
+      el('h2', { text: 'What these picks leave for later' }),
+      el('dl', { class: 'later' }, ...PAGE.later.flatMap((l) => [el('dt', { text: l.when }), el('dd', { text: l.what })]))));
+  }
+  main.append(el('section', { id: 'done' },
+    el('h2', { text: 'Your picks' }),
+    el('div', { class: 'done' },
+      el('ol', { id: 'summary' }),
+      el('p', { id: 'status', role: 'status', text: 'Saving…' }),
+      el('div', { class: 'actions' }, el('button', { type: 'button', id: 'copy', text: 'Copy my picks' })))));
+}
+
+// --- saving -------------------------------------------------------------------
+// Only an index a pick has, and text for a known id, are taken from storage.
+function adopt(saved) {
+  if (!saved || typeof saved !== 'object') return false;
+  let took = false;
+  for (const [id, i] of Object.entries(saved.picks || {})) {
+    const p = byId[id];
+    const max = p ? (p.choices || p.versions).length : 0;
+    if (Number.isInteger(i) && i >= 0 && i < max && !(id in state.picks)) { state.picks[id] = i; took = true; }
+  }
+  for (const [id, text] of Object.entries(saved.notes || {})) {
+    if (noteIds.has(id) && typeof text === 'string' && !state.notes[id]) { state.notes[id] = text.slice(0, 2000); took = true; }
+  }
+  return took;
+}
+try { adopt(JSON.parse(localStorage.getItem(PAGE.key))); } catch {}
+
+let db = null;
+let saving = false;
+let dirty = false;
+let saved = 'pending';
+async function save() {
+  try { localStorage.setItem(PAGE.key, JSON.stringify(state)); } catch {}
+  if (!db) return;
+  if (saving) { dirty = true; return; }
+  saving = true;
+  try {
+    await db.doc(PAGE.doc).set({ picks: state.picks, notes: state.notes, picked: Object.keys(state.picks).length, of: PAGE.picks.length });
+    saved = 'yes';
+  } catch { saved = 'no'; }
+  saving = false;
+  showStatus();
+  if (dirty) { dirty = false; save(); }
+}
+function showStatus() {
+  $('status').textContent =
+    saved === 'yes' ? 'Saved. Claude can read these from here.'
+    : saved === 'no' ? 'These couldn’t be saved from this view. Use Copy my picks and paste them into the chat.'
+    : 'Saving…';
+}
+function connect() {
+  if (!(window.claude && window.claude.use)) { saved = 'no'; showStatus(); return; }
+  window.claude.use('db').then(async (namespace) => {
+    if (!namespace) { saved = 'no'; showStatus(); return; }
+    db = namespace;
+    try {
+      const snap = await db.doc(PAGE.doc).get();
+      if (snap.exists && adopt(snap.data())) renderAll();
+      saved = 'yes';
+    } catch { saved = 'no'; }
+    showStatus();
+    if (Object.keys(state.picks).length || Object.keys(state.notes).length) save();
+  }).catch(() => { saved = 'no'; showStatus(); });
+}
+
+// --- the flip -------------------------------------------------------------------
+const viewing = {};
+function show(flip, i) {
+  const id = flip.dataset.pick;
+  const p = byId[id];
+  viewing[id] = i;
+  for (const img of flip.querySelectorAll('.shots img')) img.hidden = Number(img.dataset.i) !== i;
+  for (const tab of flip.querySelectorAll('.tabs button')) {
+    tab.setAttribute('aria-selected', String(Number(tab.dataset.i) === i));
+    tab.classList.toggle('picked', !p.choices && state.picks[id] === Number(tab.dataset.i));
+  }
+  const now = flip.querySelector('.now');
+  now.textContent = '';
+  now.append(el('b', { text: LETTERS[i] + ': ' + p.versions[i].name + '. ' }), p.versions[i].detail || '');
+  const choose = flip.querySelector('.choose');
+  if (choose) {
+    const is = state.picks[id] === i;
+    choose.textContent = is ? 'Picked ' + LETTERS[i] + ' ✓' : 'Pick ' + LETTERS[i];
+    choose.classList.toggle('is', is);
+  }
+}
+// 'How tall is a row? C, 36px.' and 'All together: closer.'
+const asked = (p) => p.q + (p.q.endsWith('?') ? ' ' : ': ');
+function answerText(p) {
+  const i = state.picks[p.id];
+  if (i === undefined) return null;
+  return p.choices ? p.choices[i] : LETTERS[i] + ', ' + p.versions[i].name;
+}
+function renderSummary() {
+  const ol = $('summary');
+  ol.textContent = '';
+  for (const p of PAGE.picks) {
+    const a = answerText(p);
+    ol.append(el('li', { class: a ? false : 'none', text: asked(p) + (a ? a + '.' : 'no pick yet.') + (state.notes[p.id] ? ' “' + state.notes[p.id] + '”' : '') }));
+  }
+  for (const s of PAGE.stills) if (state.notes[s.id]) ol.append(el('li', { text: s.q + ': “' + state.notes[s.id] + '”' }));
+}
+function renderAll() {
+  for (const flip of document.querySelectorAll('.flip')) show(flip, viewing[flip.dataset.pick] ?? state.picks[flip.dataset.pick] ?? 0);
+  for (const group of document.querySelectorAll('[data-answers]'))
+    for (const b of group.querySelectorAll('button')) b.setAttribute('aria-pressed', String(state.picks[group.dataset.answers] === Number(b.dataset.i)));
+  for (const t of document.querySelectorAll('textarea[data-note]')) if (document.activeElement !== t) t.value = state.notes[t.dataset.note] || '';
+  renderSummary();
+}
+function pick(id, i) {
+  if (state.picks[id] === i) delete state.picks[id]; else state.picks[id] = i;
+  renderAll();
+  save();
+}
+function listen() {
+  for (const flip of document.querySelectorAll('.flip')) {
+    const id = flip.dataset.pick;
+    const count = byId[id].versions.length;
+    for (const tab of flip.querySelectorAll('.tabs button')) tab.addEventListener('click', () => show(flip, Number(tab.dataset.i)));
+    flip.querySelector('.shots').addEventListener('click', () => show(flip, ((viewing[id] ?? 0) + 1) % count));
+    const choose = flip.querySelector('.choose');
+    if (choose) choose.addEventListener('click', () => pick(id, viewing[id] ?? 0));
+  }
+  for (const group of document.querySelectorAll('[data-answers]'))
+    for (const b of group.querySelectorAll('button')) b.addEventListener('click', () => pick(group.dataset.answers, Number(b.dataset.i)));
+  let typing = null;
+  for (const t of document.querySelectorAll('textarea[data-note]')) t.addEventListener('input', () => {
+    state.notes[t.dataset.note] = t.value.slice(0, 2000);
+    renderSummary();
+    clearTimeout(typing);
+    typing = setTimeout(save, 600);
+  });
+  $('copy').addEventListener('click', async () => {
+    const lines = PAGE.picks.map((p, n) => (n + 1) + '. ' + asked(p) + (answerText(p) || 'no pick') + (state.notes[p.id] ? ' — ' + state.notes[p.id] : ''));
+    for (const s of PAGE.stills) if (state.notes[s.id]) lines.push(s.q + ' — ' + state.notes[s.id]);
+    try { await navigator.clipboard.writeText(lines.join('\n')); $('copy').textContent = 'Copied'; }
+    catch { $('copy').textContent = 'Couldn’t copy. Select the list above.'; }
+  });
+}
+
+build();
+listen();
+renderAll();
+showStatus();
+connect();
+</script>
+</body>
+</html>
